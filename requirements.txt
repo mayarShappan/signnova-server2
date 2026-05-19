@@ -1,6 +1,7 @@
 flask==3.0.3
 flask-cors==5.0.0
-mediapipe==0.10.14
+mediapipe==0.10.21
 numpy==1.26.4
-scikit-learn==1.5.1
 opencv-python-headless==4.10.0.84
+scikit-learn==1.6.1
+xgboost==2.1.1

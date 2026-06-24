@@ -1,12 +1,13 @@
 # ─────────────────────────────────────────
 #  SignNova — Flask API Server (Words)
-#  يشغل مودل الكلمات ويقبل frames من الويبسايت
+#  Runs the word recognition model and receives frames from the website
 #
-#  تشغيل:
+#  Run:
 #    pip install flask flask-cors mediapipe --break-system-packages
 #    python server_words.py
 #
-#  بعدين افتح الويبسايت → Demo Words وهيتوصل أوتوماتيك
+#  Then open the website → Demo Words
+#  It will connect automatically.
 # ─────────────────────────────────────────
 
 import os
@@ -22,7 +23,7 @@ from flask_cors import CORS
 import mediapipe as mp
 
 # ─────────────────────────────────────────
-#  Paths  (نفس folder الـ server_words.py)
+# Paths (same folder as server_words.py)
 # ─────────────────────────────────────────
 MODEL_PATH   = "sign_model.pkl"
 ENCODER_PATH = "label_encoder.pkl"
@@ -30,14 +31,14 @@ CONFIG_PATH  = "model_config.pkl"
 
 for f in [MODEL_PATH, ENCODER_PATH, CONFIG_PATH]:
     if not os.path.exists(f):
-        print(f"[ERROR] ملف مش موجود: {f}")
-        print("        تأكد إن الـ server شغال في نفس folder الـ .pkl files")
+        print(f"[ERROR] File not found: {f}")
+        print("        Make sure the server is running in the same folder as the .pkl files")
         sys.exit(1)
 
 # ─────────────────────────────────────────
 #  Load Model
 # ─────────────────────────────────────────
-print("⏳ Loading word model...")
+print("Loading word model...")
 with open(MODEL_PATH,   "rb") as f: model         = pickle.load(f)
 with open(ENCODER_PATH, "rb") as f: label_encoder = pickle.load(f)
 with open(CONFIG_PATH,  "rb") as f: config        = pickle.load(f)
@@ -51,12 +52,12 @@ HAND_DISTS_DIM   = config["hand_dist_dim"]
 HAND_DIST_SINGLE = HAND_DISTS_DIM // 2
 
 CLASSES = list(label_encoder.classes_)
-print(f"✅ Model loaded! Classes ({len(CLASSES)}): {CLASSES}")
+print(f"Model loaded! Classes ({len(CLASSES)}): {CLASSES}")
 
 # ─────────────────────────────────────────
 #  MediaPipe Holistic
 # ─────────────────────────────────────────
-print("⏳ Loading MediaPipe Holistic...")
+print("Loading MediaPipe Holistic...")
 mp_holistic = mp.solutions.holistic
 holistic = mp_holistic.Holistic(
     static_image_mode=False,
@@ -64,10 +65,10 @@ holistic = mp_holistic.Holistic(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
-print("✅ MediaPipe ready!")
+print("MediaPipe ready!")
 
 # ─────────────────────────────────────────
-#  Feature Extraction  (نفس camera.py)
+# Feature Extraction (same as camera.py)
 # ─────────────────────────────────────────
 HAND_PAIRS = list(combinations(range(21), 2))
 
@@ -93,7 +94,6 @@ def get_zeros(dim):
     return [0.0] * dim
 
 def extract_frame_vector_from_result(result):
-    """استخرج feature vector من نتيجة MediaPipe Holistic"""
     if result.left_hand_landmarks:
         raw      = [v for lm in result.left_hand_landmarks.landmark for v in (lm.x, lm.y, lm.z)]
         lh       = make_relative(raw)
@@ -175,9 +175,9 @@ def health():
 @app.route("/predict_words", methods=["POST"])
 def predict_words():
     """
-    يستقبل frames (list of base64 images) من الويبسايت،
-    يستخرج Holistic landmarks من كل frame،
-    يرجع predicted word + confidence + top3
+    Receives frames (a list of Base64-encoded images) from the website,
+    extracts Holistic landmarks from each frame,
+    and returns the predicted word, confidence score, and top 3 predictions.
     """
     try:
         import cv2
@@ -238,16 +238,23 @@ def predict_words():
 @app.route("/predict_words_landmarks", methods=["POST"])
 def predict_words_landmarks():
     """
-    بديل أسرع: يستقبل frames كـ landmarks مباشرة
-    كل frame = list of 63 floats (21 نقطة × 3 للـ right hand)
-    أو dict فيه left_hand, right_hand, pose
+    A faster alternative: receives frames as landmarks directly.
+    
+    Each frame can be:
+    - A list of 63 floats (21 points × 3 coordinates for the right hand), or
+    - A dictionary containing landmarks such as:
+      {
+          "left_hand": ...,
+          "right_hand": ...,
+          "pose": ...
+      }
     """
     try:
         data   = request.get_json(force=True)
         frames = data.get("frames")  # list of frame vectors
 
         if not frames or len(frames) < 3:
-            return jsonify({"error": "محتاج على الأقل 3 frames"}), 400
+            return jsonify({"error": "At least 3 frames are required"}), 400
 
         frames_vectors = [np.array(f, dtype=np.float32) for f in frames]
 
@@ -268,8 +275,8 @@ def predict_words_landmarks():
 if __name__ == "__main__":
     print("\n" + "=" * 55)
     print("  SignNova Words API Server")
-    print("  http://localhost:5001")
+    print("  http://localhost:7860")
     print("=" * 55)
-    print("  افتح الويبسايت → Demo Words وهيتوصل بالموديل")
-    print("  اضغط Ctrl+C عشان توقف الـ server\n")
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    print("  Open the website → Demo Words and it will connect to the model")
+    print("  Press Ctrl+C to stop the server\n")
+    app.run(host='0.0.0.0', port=7860)
